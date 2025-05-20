@@ -44,13 +44,10 @@ input:focus, select:focus {
   border-color: #0074d9;
 }
 
-button {
-  background: #0074d9;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  margin-top: 0.5rem;
-  transition: background 0.18s;
+button[style*="background: #f0f7fc"] {
+  border: 1px solid #0074d9;
+  background: #f0f7fc;
+  color: #0074d9;
 }
 
 button:hover {
