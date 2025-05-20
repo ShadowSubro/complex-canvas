@@ -10,7 +10,25 @@ export default function App() {
   const [expr, setExpr] = useState("sin(z)");
   const [plotType, setPlotType] = useState("2d"); // 2d, 3d-modulus, 3d-arg
   const [plotData, setPlotData] = useState(null);
-  const [err, setErr] = useState(null);
+  const [parseError, setParseError] = useState(null);
+  const [parseSuccess, setParseSuccess] = useState(true);
+  const [showCalculator, setShowCalculator] = useState(false);
+
+  // Debounce for input parsing
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      try {
+        // Try to compile (not evaluate) the expression
+        math.compile(expr);
+        setParseError(null);
+        setParseSuccess(true);
+      } catch (e) {
+        setParseError(e && e.message ? e.message : "Invalid expression.");
+        setParseSuccess(false);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [expr]);
 
   // Generate grid for z in complex plane
   function generateGrid(size = GRID_SIZE, range = 2 * Math.PI) {
@@ -30,7 +48,6 @@ export default function App() {
   }
 
   function plot() {
-    setErr(null);
     try {
       const { x, y, grid } = generateGrid();
       const code = math.compile(expr);
@@ -64,9 +81,6 @@ export default function App() {
         z: Z
       });
     } catch (e) {
-      setErr(
-        "Error parsing expression. Try functions like sin(z), exp(z), z^2, 1/z, etc."
-      );
       setPlotData(null);
     }
   }
@@ -81,6 +95,26 @@ export default function App() {
     setExpr(expr + str);
   }
 
+  function handleInputChange(e) {
+    setExpr(e.target.value);
+  }
+
+  function handleParseCheck() {
+    try {
+      math.compile(expr);
+      setParseError(null);
+      setParseSuccess(true);
+    } catch (e) {
+      setParseError(e && e.message ? e.message : "Invalid expression.");
+      setParseSuccess(false);
+    }
+  }
+
+  function handlePlotClick() {
+    handleParseCheck();
+    if (parseSuccess) plot();
+  }
+
   return (
     <div className="app-container">
       <h1>🧮 Complex Function Visualizer</h1>
@@ -90,12 +124,22 @@ export default function App() {
           <b>Enter function of <code>z</code>:</b>
           <input
             value={expr}
-            onChange={e => setExpr(e.target.value)}
+            onChange={handleInputChange}
             placeholder="e.g. sin(z), exp(z), z^2, 1/z"
             style={{ width: "100%", marginTop: 4 }}
           />
         </label>
         <MathKeyboard onInput={handleKeyboardInput} />
+
+        {/* Parse feedback */}
+        <div style={{ minHeight: 22 }}>
+          {parseSuccess && !parseError && (
+            <span style={{ color: "#006400" }}>Expression parsed successfully ✔️</span>
+          )}
+          {!parseSuccess && parseError && (
+            <span style={{ color: "red" }}>Parse error: {parseError}</span>
+          )}
+        </div>
 
         <label>
           <b>Graph type:</b>
@@ -105,11 +149,24 @@ export default function App() {
             <option value="3d-arg">3D: arg(f(z)) (Argument)</option>
           </select>
         </label>
-        <button onClick={plot}>Plot!</button>
-        {err && <div style={{ color: "red" }}>{err}</div>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={handlePlotClick}>Plot!</button>
+          <button
+            type="button"
+            onClick={() => setShowCalculator((show) => !show)}
+            style={{
+              background: showCalculator ? "#f0f7fc" : "#0074d9",
+              color: showCalculator ? "#0074d9" : "#fff",
+              border: "1px solid #0074d9"
+            }}
+          >
+            {showCalculator ? "Hide Calculator" : "Show Calculator"}
+          </button>
+        </div>
       </div>
 
-      <Calculator />
+      {/* Calculator is hidden unless toggled */}
+      {showCalculator && <Calculator />}
 
       <div className="plot-container">
         <Plot expr={expr} plotType={plotType} plotData={plotData} />
